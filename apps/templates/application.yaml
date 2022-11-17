@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL:  https://github.com/Jcobzajac/GitOps 
+    repoURL:  https://github.com/Jcobzajac/GitOps.git
     targetRevision: HEAD
-    path: apps/charts
+    path: apps/charts/application
   destination:
     server: https://kubernetes.default.svc
     namespace: default
