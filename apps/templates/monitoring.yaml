@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: http://15.152.251.93:8929root/gitopsconf
+    repoURL: https://github.com/Jcobzajac/GitOps
     targetRevision: HEAD
     path: apps/charts/monitoring
   destination:
