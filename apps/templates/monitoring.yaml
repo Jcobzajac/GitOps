@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: default
+spec:
+  project: default
+  source:
+    repoURL: http://15.152.251.93:8929root/gitopsconf
+    targetRevision: HEAD
+    path: apps/charts/monitoring
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: True
+      selfHeal: True
+    syncOptions:
+      - CreateNamespace=true

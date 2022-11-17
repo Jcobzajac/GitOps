@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: default
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: http://15.152.251.93:8929/root/gitopsconf
+    targetRevision: HEAD
+    path: apps/templates
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: True
+      selfHeal: True
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{.Values.deployment_app.deployment_label_value}}
+  name: {{.Values.deployment_app.deployment_name}}
+spec:
+  replicas: {{.Values.deployment_app.amount_replicas}}
+  selector:
+    matchLabels:
+      app: {{.Values.deployment_app.container_label_value}}
+  template:
+    metadata:
+      labels:
+        app: {{.Values.deployment_app.container_label_value}}
+    spec:
+      containers:
+      - image: {{.Values.deployment_app.container_image}} 
+        name: {{.Values.deployment_app.container_name}}
+        ports:
+        - containerPort: {{.Values.deployment_app.container_port}}
+        env:
+        - name: DB_HOST
+          value: {{ tpl .Values.deployment_app.db_host . }}
+        - name: DB_HOST_REPLICA
+          value: {{ tpl .Values.deployment_app.db_host_replica . }}
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{.Values.secretfile.name}}
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{.Values.secretfile.name}}
+              key: DB_PASS
+        - name: DB_DATABASE
+          value: {{.Values.deployment_app.db_database}}
+        - name: DB_PORT
+          value: {{.Values.deployment_app.db_port | quote}}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - {{.Values.deployment_app.container_label_value}}
+              topologyKey: topology.kubernetes.io/zone
+            weight: 100

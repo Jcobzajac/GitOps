@@ -1,0 +1,101 @@
+##### MANIFEST FILES #####
+
+deployment_app:
+  deployment_label_value: certification
+  deployment_name: deployment-certification
+  amount_replicas: 12
+  container_label_value: flask
+  container_image: 644435390668.dkr.ecr.ap-northeast-3.amazonaws.com/jenkins-jz-pipe:flaskcertification
+  container_name: flaskapp
+  container_port: 5000
+  secret_name: database
+  db_host: "{{ .Release.Name }}-mysql-primary"
+  db_host_replica: "{{ .Release.Name }}-mysql-secondary"
+  db_database: records
+  db_port: 3306
+
+database:
+  configmap_name: mysql-initdb
+  storageclass_name: ebs-sc 
+  storageclass_provisioner: ebs.csi.aws.com
+  storageclass_volbndmd: WaitForFirstConsumer 
+  pvcclaim_name: ebs-mysql-pv-claim
+  pvcclaim_destination: mysql
+  pvcclaim_accessmode: ReadWriteOnce
+  pvcclaim_request_storage: 8Gi 
+
+#DEPRECATED
+#secretfile:
+  #name: secretfile
+  #db_user: root #cm9vdAo=
+  #db_pass: password #cGFzc3dvcmQK
+  #db_user_replica: jakub #jakub
+  #db_pass_replica: zajac123 #zajac123
+
+ingress_controller:
+  servacc_name: aws-load-balancer-controller
+  servcacc_rolearn: arn:aws:iam::644435390668:role/aws-load-balancer-controller
+  namespace : default
+  service_name: service-flask
+  service_port: 80
+  service_targetport: 5000
+  service_type: NodePort
+  service_protocol: TCP
+  ingress_name: ingress-app
+  alb_name: zajac-alb
+  ingress_scheme: internet-facing
+  ingress_healthcheck_protocol: HTTP
+  ingress_healthcheck_port: traffic-port
+  ingress_health_interval_sec: 15
+  ingress_health_timeout_sec: 5
+  ingress_success_code: 200
+  ingress_healthy_threshold_count: 2
+  ingress_uhealthy_threshold_count: 2
+  #ingress_listen_ports: "[{"HTTPS":443}, {"HTTP":80}]"
+  ingress_certificate_arn: arn:aws:acm:eu-west-3:644435390668:certificate/eb80f82d-e889-4b77-9a40-f7b88db02b58
+  ingress_ssl_redirect: 443
+  ingress_class_name: alb
+  ingress_tag: Environment=prod
+
+
+
+
+
+aws-load-balancer-controller:
+  clusterName: zajac
+  serviceAccount:
+    create: false
+    name: aws-load-balancer-controller
+  
+  serviceMonitor:
+    enabled: true
+    additionalLabels:
+      prometheus: monitoring
+  #serviceMonitor.namespace
+
+mysql:
+  architecture: replication
+  
+  auth:
+    createDatabase: true
+    database: "records"
+    existingSecret: database
+
+  secondary:
+    replicaCount: 3
+
+  initdbScriptsConfigMap: "mysql-initdb"
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      labels:
+        prometheus: monitoring
+
+    prometheusRule: 
+      additionalLabels: "monitoring"
+
+
+
+
