@@ -25,15 +25,12 @@ spec:
         - name: DB_HOST_REPLICA
           value: {{ tpl .Values.deployment_app.db_host_replica . }}
         - name: DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: {{.Values.secretfile.name}}
-              key: DB_USER
+          value: "root"
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{.Values.secretfile.name}}
-              key: DB_PASS
+              name: {{.Values.deployment_app.secret_name}}
+              key: mysql-root-password
         - name: DB_DATABASE
           value: {{.Values.deployment_app.db_database}}
         - name: DB_PORT
