@@ -9,6 +9,7 @@ spec:
     repoURL: https://github.com/Jcobzajac/GitOps.git
     targetRevision: HEAD
     path: apps/charts/monitoring
+  destination:  
     server: https://kubernetes.default.svc
     namespace: default
   syncPolicy:
