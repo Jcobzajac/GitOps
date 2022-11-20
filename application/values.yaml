@@ -1,0 +1,287 @@
+##### MANIFEST FILES #####
+
+deployment_app:
+  deployment_label_value: certification
+  deployment_name: deployment-certification
+  amount_replicas: 4
+  container_label_value: flask
+  container_image: 644435390668.dkr.ecr.ap-northeast-3.amazonaws.com/jenkins-jz-pipe:5.0
+  container_name: flaskapp
+  container_port: 5000
+  secret_name: database
+  db_host: "{{ .Release.Name }}-mysql-primary"
+  db_host_replica: "{{ .Release.Name }}-mysql-secondary"
+  db_database: records
+  db_port: 3306
+  requests_memory: 64Mi
+  requests_cpu: 250m
+  limits_memory: 128Mi
+  limits_cpu: 500m
+
+hpa_app:
+  name: app-scaler
+  min_replicas: 10
+  max_replicas: 20
+  cpu_average_utilization: 70
+
+database:
+  configmap_name: mysql-initdb
+  storageclass_name: ebs-sc 
+  storageclass_provisioner: ebs.csi.aws.com
+  storageclass_volbndmd: WaitForFirstConsumer 
+  pvcclaim_name: ebs-mysql-pv-claim
+  pvcclaim_destination: mysql
+  pvcclaim_accessmode: ReadWriteOnce
+  pvcclaim_request_storage: 8Gi 
+
+
+ingress_controller:
+  servacc_name: aws-load-balancer-controller
+  servcacc_rolearn: arn:aws:iam::644435390668:role/aws-load-balancer-controller
+  namespace : default
+  service_name: service-flask
+  service_port: 80
+  service_targetport: 5000
+  service_type: NodePort
+  service_protocol: TCP
+  ingress_scheme: internet-facing
+  ingress_healthcheck_protocol: HTTP
+  ingress_healthcheck_port: traffic-port
+  ingress_health_interval_sec: 15
+  ingress_health_timeout_sec: 5
+  ingress_success_code: 200
+  ingress_healthy_threshold_count: 2
+  ingress_uhealthy_threshold_count: 2
+  #ingress_listen_ports: "[{"HTTPS":443}, {"HTTP":80}]"
+  ingress_ssl_redirect: 443
+  ingress_class_name: alb
+  ingress_tag: Environment=prod
+
+app_ingress:
+  ingress_name: ingress-app
+  alb_name: ingress-app
+  certificate_arn: arn:aws:acm:eu-west-3:644435390668:certificate/3535faf4-5b55-45a9-8321-da9eaacb0578
+  host_name: application.jakubzajac.click
+  service_name: service-flask
+  service_port: 80
+
+kibana_ingress:
+  ingress_name: ingress-kibana
+  alb_name: ingress-kibana
+  certificate_arn: arn:aws:acm:eu-west-3:644435390668:certificate/f99c4348-f3e5-4ca2-ae54-d7bd774c9d08
+  host_name: kibana.jakubzajac.click
+  service_name: "{{.Release.Name}}-kibana"
+  service_port: 5601
+
+grafana_ingress:
+  ingress_name: ingress-grafana
+  alb_name: ingress-grafana
+  certificate_arn: arn:aws:acm:eu-west-3:644435390668:certificate/f9bd3654-aafe-4ba7-ad42-a1a48077bf5b
+  host_name: grafana.jakubzajac.click
+  service_name: "{{.Release.Name}}-grafana"
+  service_port: 80
+
+argocd_ingress:
+  ingress_name: ingress-argocd
+  alb_name: ingress-argocd
+  certificate_arn: arn:aws:acm:eu-west-3:644435390668:certificate/f5bbeec5-1cbc-4b74-a811-2898df0479fd
+  host_name: argocd.jakubzajac.click
+  service_name: argo-cd-argocd-server #{name-chart}-argocd-server - Chart name from terraform
+  service_port: 80
+
+
+
+
+aws-load-balancer-controller:
+  clusterName: zajac
+  serviceAccount:
+    create: false
+    name: aws-load-balancer-controller
+  
+  serviceMonitor:
+    enabled: true
+    additionalLabels:
+      prometheus: monitoring
+
+mysql:
+  architecture: replication
+  
+  auth:
+    createDatabase: true
+    database: "records"
+    existingSecret: database
+
+  primary:
+    persistence:
+      size: 1Gi
+  
+  secondary:
+    replicaCount: 3
+    persistence:
+      size: 1Gi
+
+  initdbScriptsConfigMap: "mysql-initdb"
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      labels:
+        prometheus: monitoring
+
+     #prometheusRule: 
+       #additionalLabels: "monitoring"
+
+
+kibana:
+  service:
+    type: NodePort
+
+elasticsearch:
+  replicas: 1
+  volumeClaimTemplate:
+    accessModes: ["ReadWriteOnce"]
+    resources:
+      requests:
+        storage: 4Gi
+
+##### LOGGING #####      
+fluent-bit:
+  fileConfigs:
+  01_sources.conf: |-
+    <source>
+      @id fluentd-containers.log
+      @type tail
+      path /var/log/containers/*.log
+      pos_file /var/log/containers.log.pos
+      tag raw.kubernetes.*
+      read_from_head true
+      <parse>
+        @type multi_format
+        <pattern>
+          format json
+          time_key time
+          time_format %Y-%m-%dT%H:%M:%S.%NZ
+        </pattern>
+        <pattern>
+          format /^(?<time>.+) (?<stream>stdout|stderr) [^ ]* (?<log>.*)$/
+          time_format %Y-%m-%dT%H:%M:%S.%N%:z
+        </pattern>
+      </parse>
+    </source>
+
+  02_filters.conf: |-
+    # Detect exceptions in the log output and forward them as one log entry.
+    <match raw.kubernetes.**>
+      @id raw.kubernetes
+      @type detect_exceptions
+      remove_tag_prefix raw
+      message log
+      stream stream
+      multiline_flush_interval 5
+      max_bytes 500000
+      max_lines 1000
+    </match>
+
+    # Concatenate multi-line logs
+    <filter **>
+      @id filter_concat
+      @type concat
+      key message
+      multiline_end_regexp /\n$/
+      separator ""
+      timeout_label @NORMAL
+      flush_interval 5
+    </filter>
+
+    # Enriches records with Kubernetes metadata
+    <filter kubernetes.**>
+      @id filter_kubernetes_metadata
+      @type kubernetes_metadata
+    </filter>
+
+    # Fixes json fields in Elasticsearch
+    <filter kubernetes.**>
+      @id filter_parser
+      @type parser
+      key_name log
+      reserve_time true
+      reserve_data true
+      remove_key_name_field true
+      <parse>
+        @type multi_format
+        <pattern>
+          format json
+        </pattern>
+        <pattern>
+          format none
+        </pattern>
+      </parse>
+    </filter>
+
+  03_dispatch.conf: |-
+
+  04_outputs.conf: |-
+    # handle timeout log lines from concat plugin
+    <match **>
+      @type relabel
+      @label @NORMAL
+    </match>
+
+    <label @NORMAL>
+    <match **>
+      @id elasticsearch
+      @type elasticsearch
+      @log_level info
+      include_tag_key true
+      host "elasticsearch-master"
+      port 9200
+      path ""
+      scheme http
+      ssl_verify true
+      ssl_version TLSv1_2
+      type_name _doc
+      logstash_format true
+      logstash_prefix logstash
+      reconnect_on_error true
+      <buffer>
+        @type file
+        path /var/log/fluentd-buffers/kubernetes.system.buffer
+        flush_mode interval
+        retry_type exponential_backoff
+        flush_thread_count 2
+        flush_interval 5s
+        retry_forever
+        retry_max_interval 30
+        chunk_limit_size 2M
+        queue_limit_length 8
+        overflow_action block
+      </buffer>
+    </match>
+    </label>
+
+##### MONITORING #####
+
+kube-prometheus-stack:
+  defaultRules:
+    rules:
+      etcd: false
+      kubeScheduler: false
+  kubeControllerManager:
+    enabled: false
+  kubeEtcd:
+    enabled: false
+  kubeScheduler:
+    enabled: false
+  prometheus:
+    prometheusSpec:
+      serviceMonitorSelector:
+        matchLabels:
+          prometheus: monitoring
+    grafana:
+      service:
+        type: NodePort
+
+
+
+

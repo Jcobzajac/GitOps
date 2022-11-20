@@ -1,9 +1,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{.Values.ingress_controller.ingress_name}}
+  name: {{.Values.app_ingress.ingress_name}}
   annotations:
-    alb.ingress.kubernetes.io/load-balancer-name: {{.Values.ingress_controller.alb_name}}
+    alb.ingress.kubernetes.io/load-balancer-name: {{.Values.app_ingress.alb_name}}
     alb.ingress.kubernetes.io/scheme: {{.Values.ingress_controller.ingress_scheme}}
     alb.ingress.kubernetes.io/healthcheck-protocol: {{.Values.ingress_controller.ingress_healthcheck_protocol}} 
     alb.ingress.kubernetes.io/healthcheck-port: {{.Values.ingress_controller.ingress_healthcheck_port}}  
@@ -12,13 +12,20 @@ metadata:
     alb.ingress.kubernetes.io/success-codes: {{.Values.ingress_controller.ingress_success_code | quote}} 
     ## SSL Settings
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}, {"HTTP":80}]'
-    alb.ingress.kubernetes.io/certificate-arn: {{.Values.ingress_controller.ingress_certificate_arn}}
+    alb.ingress.kubernetes.io/certificate-arn: {{.Values.app_ingress.certificate_arn}}
     alb.ingress.kubernetes.io/ssl-redirect: {{.Values.ingress_controller.ingress_ssl_redirect | quote}} 
     alb.ingress.kubernetes.io/tags: {{.Values.ingress_controller.ingress_tag}}    
 spec:
-  ingressClassName: {{.Values.ingress_controller.ingress_class_name}}                
-  defaultBackend:
-    service:
-      name: {{.Values.ingress_controller.service_name}}
-      port:
-        number: {{.Values.ingress_controller.service_port}}     
+  ingressClassName: {{.Values.ingress_controller.ingress_class_name}} 
+  rules:
+  - host: {{.Values.app_ingress.host_name}}
+    http:
+      paths:
+      - path: /
+        backend:
+          service:
+            name: {{.Values.app_ingress.service_name}}
+            port:
+              number: {{.Values.app_ingress.service_port}} 
+        pathType: Prefix   
+  

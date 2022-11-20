@@ -35,6 +35,13 @@ spec:
           value: {{.Values.deployment_app.db_database}}
         - name: DB_PORT
           value: {{.Values.deployment_app.db_port | quote}}
+        resources:
+          requests:
+            memory: {{.Values.deployment_app.requests_memory | quote}}
+            cpu: {{.Values.deployment_app.requests_cpu | quote}}
+          limits:
+            memory: {{.Values.deployment_app.limits_memory | quote}}
+            cpu: {{.Values.deployment_app.limits_cpu | quote}}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

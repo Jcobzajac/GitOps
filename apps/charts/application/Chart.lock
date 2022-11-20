@@ -1,9 +1,0 @@
-dependencies:
-- name: mysql
-  repository: https://charts.bitnami.com/bitnami
-  version: 9.4.1
-- name: aws-load-balancer-controller
-  repository: https://aws.github.io/eks-charts
-  version: 1.4.6
-digest: sha256:01634cc3f88cbf65702e318772c9bd5a881ac68b57ec8b4c8398e5171695d37d
-generated: "2022-11-13T12:37:53.855818433+01:00"

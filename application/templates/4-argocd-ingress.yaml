@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{.Values.argocd_ingress.ingress_name}}
+  annotations:
+    alb.ingress.kubernetes.io/load-balancer-name: {{.Values.argocd_ingress.alb_name}}
+    alb.ingress.kubernetes.io/scheme: {{.Values.ingress_controller.ingress_scheme}}
+    alb.ingress.kubernetes.io/healthcheck-protocol: {{.Values.ingress_controller.ingress_healthcheck_protocol}} 
+    alb.ingress.kubernetes.io/healthcheck-port: {{.Values.ingress_controller.ingress_healthcheck_port}}  
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: {{.Values.ingress_controller.ingress_health_interval_sec | quote}}
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: {{.Values.ingress_controller.ingress_health_timeout_sec | quote}}
+    alb.ingress.kubernetes.io/success-codes: {{.Values.ingress_controller.ingress_success_code | quote}} 
+    ## SSL Settings
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}, {"HTTP":80}]'
+    alb.ingress.kubernetes.io/certificate-arn: {{.Values.argocd_ingress.certificate_arn}}
+    alb.ingress.kubernetes.io/ssl-redirect: {{.Values.ingress_controller.ingress_ssl_redirect | quote}} 
+    alb.ingress.kubernetes.io/tags: {{.Values.ingress_controller.ingress_tag}}    
+spec:
+  ingressClassName: {{.Values.ingress_controller.ingress_class_name}} 
+  rules:
+  - host: {{.Values.argocd_ingress.host_name}}
+    http:
+      paths:
+      - path: /
+        backend:
+          service:
+            name: {{.Values.argocd_ingress.service_name}}
+            port:
+              number: {{.Values.argocd_ingress.service_port}} 
+        pathType: Prefix   
+  
