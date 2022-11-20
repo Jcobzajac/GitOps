@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/Jcobzajac/GitOps.git
     targetRevision: HEAD
-    path: apps/templates
+    path: /application
   destination:
     server: https://kubernetes.default.svc
     namespace: default
