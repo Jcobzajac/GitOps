@@ -278,6 +278,9 @@ kube-prometheus-stack:
       serviceMonitorSelector:
         matchLabels:
           prometheus: monitoring
+  commonLabels:
+    prometheus: monitoring
+    
   grafana:
     service:
       type: NodePort
