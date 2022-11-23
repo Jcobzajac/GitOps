@@ -20,9 +20,9 @@ deployment_app:
 
 hpa_app:
   name: app-scaler
-  min_replicas: 10
-  max_replicas: 20
-  cpu_average_utilization: 70
+  min_replicas: 6
+  max_replicas: 12
+  cpu_average_utilization: 50
 
 database:
   configmap_name: mysql-initdb
